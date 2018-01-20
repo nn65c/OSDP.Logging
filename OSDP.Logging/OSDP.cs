@@ -59,7 +59,7 @@ namespace OSDP.Logging
             return Length >= 7 && Length <= 1440;
         }
 
-        private byte Checksum2s(byte[] bytes, bool skipLast = false)
+        private static byte Checksum2s(byte[] bytes, bool skipLast = false)
         {
             int calcSum = 0;
             int bytesLength = bytes.Length;
