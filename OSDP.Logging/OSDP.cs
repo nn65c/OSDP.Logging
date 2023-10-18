@@ -9,7 +9,7 @@ class OSDP
     public byte Ctrl { get; }
     public byte CmdReply { get; }
     public byte[] Data { get; }
-    public byte Checksum { get; }
+    public ushort Checksum { get; }
     public byte[] Message { get; }
     public bool ValidMessage { get; } = false;
     public bool PollAck { get; }
@@ -49,7 +49,7 @@ class OSDP
 
     private bool CheckMessage()
     {
-        return Checksum == Checksum2s(Message, true);
+        return Checksum == CheckCKSUM(Message);
     }
 
     private bool CheckHeader()
@@ -57,15 +57,33 @@ class OSDP
         return Length >= 7 && Length <= 1440;
     }
 
-    private static byte Checksum2s(byte[] bytes, bool skipLast = false)
+    private static ushort CheckCRC(byte[] data)
+    {
+        const ushort polynomial = 0x1021;
+        ushort crcValue = 0xFFFF;
+
+        for (int i = 0; i < data.Length; i++)
+        {
+            byte by = data[i];
+            for (int j = 0; j < 8; j++)
+            {
+                bool bit = ((by >> (7 - j) & 1) == 1);
+                bool c15 = ((crcValue >> 15 & 1) == 1);
+                crcValue <<= 1;
+                if (c15 ^ bit) crcValue ^= polynomial;
+            }
+        }
+
+        crcValue &= 0xFFFF;
+        return crcValue;
+    }
+
+
+
+    private static byte CheckCKSUM(byte[] bytes)
     {
         int calcSum = 0;
-        int bytesLength = bytes.Length;
-
-        if (skipLast)
-        {
-            bytesLength--;
-        }
+        int bytesLength = bytes.Length - 1;
 
         for (int i = 0; i < bytesLength; i++)
         {
