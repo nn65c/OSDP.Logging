@@ -1,58 +1,55 @@
-﻿using System;
-using System.IO.Ports;
-using System.Linq;
+﻿using System.IO.Ports;
 
-namespace OSDP.Logging
+namespace OSDP.Logging;
+
+class SerialTool
 {
-    class SerialTool
+    static private int counter = 0;
+    static private int skip = 0;
+
+    public static void CursorSpin(int delay)
     {
-        static private int counter = 0;
-        static private int skip = 0;
+        string[] sequence = new string[] { ".    ", "..   ", "...  ", ".... ", "....." };
+        skip++;
 
-        public static void CursorSpin(int delay)
+        if (delay == skip)
         {
-            string[] sequence = new string[] { ".    ", "..   ", "...  ", ".... ", "....." };
-            skip++;
-
-            if (delay == skip)
-            {
-                counter++;
-                skip = 0;
-            }
-
-            if (counter >= (sequence.Length))
-            {
-                counter = 0;
-            }
-
-            Console.Write(sequence[counter]);
-            Console.SetCursorPosition(Console.CursorLeft - sequence[counter].Length, Console.CursorTop);
+            counter++;
+            skip = 0;
         }
 
-        public static string BytesToHexString(byte[] bytes, string separator = ";")
+        if (counter >= sequence.Length)
         {
-            return string.Join(separator, bytes.Select(i => i.ToString("X2")));
+            counter = 0;
         }
 
-        public static string CheckComPort(string[] args)
+        Console.Write(sequence[counter]);
+        Console.SetCursorPosition(Console.CursorLeft - sequence[counter].Length, Console.CursorTop);
+    }
+
+    public static string BytesToHexString(byte[] bytes, string separator = ";")
+    {
+        return string.Join(separator, bytes.Select(i => i.ToString("X2")));
+    }
+
+    public static string CheckComPort(string[] args)
+    {
+        string[] portNames = SerialPort.GetPortNames();
+
+        if (args.Length == 0 || !portNames.Contains(args[0]))
         {
-            string[] portNames = SerialPort.GetPortNames();
+            Console.WriteLine("Please specify a valid COM-port.");
 
-            if (args.Length == 0 || !portNames.Contains(args[0]))
+            Console.WriteLine();
+            Console.WriteLine("Available COM-ports:");
+            foreach (string portName in portNames)
             {
-                Console.WriteLine("Please specify a valid COM-port.");
-
-                Console.WriteLine();
-                Console.WriteLine("Available COM-ports:");
-                foreach (string portName in portNames)
-                {
-                    Console.WriteLine(portName);
-                }
-
-                return "";
+                Console.WriteLine(portName);
             }
 
-            return args[0];
+            return "";
         }
+
+        return args[0];
     }
 }
