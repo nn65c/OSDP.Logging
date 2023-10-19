@@ -16,7 +16,7 @@ class Program
         string filename = "osdp_" + DateTime.Now.ToString("yyyMMdd_HHmmss_fff") + ".txt";
         Console.CursorVisible = false;
 
-        SerialPort sp = new SerialPort(comPort);
+        using SerialPort sp = new SerialPort(comPort);
         sp.Open();
 
         while (true)

@@ -13,6 +13,7 @@ class OSDP
     public byte[] Message { get; }
     public bool ValidMessage { get; } = false;
     public bool PollAck { get; }
+    public bool CRC { get; set; }
 
     public OSDP(SerialPort sp)
     {
@@ -39,25 +40,48 @@ class OSDP
             Address = Message[1];
             Ctrl = Message[4];
             CmdReply = Message[5];
-            Checksum = Message[Length - 1];
+
+            if ((Ctrl & (1 << 3)) == 0)
+            {
+                Checksum = Message[Length - 1];
+                CRC = false;
+            }
+            else
+            {
+                Checksum = (ushort)(Message[Length - 2] + (Message[Length - 1] << 8));
+                CRC = true;
+            }
 
             ValidMessage = CheckMessage();
             PollAck = CmdReply == 0x40 || CmdReply == 0x60;
         }
 
     }
-
-    private bool CheckMessage()
-    {
-        return Checksum == CheckCKSUM(Message);
-    }
-
+    
     private bool CheckHeader()
     {
         return Length >= 7 && Length <= 1440;
     }
 
-    private static ushort CheckCRC(byte[] data)
+    private bool CheckMessage()
+    {
+        if (CRC)
+        {
+            byte[] messageCRC = new byte[Message.Length - 2];
+            Array.Copy(Message, messageCRC, Message.Length - 2);
+            return Checksum == CalculateCRC(messageCRC);
+        }
+        else
+        {
+            byte[] messageCKSUM = new byte[Message.Length - 1];
+            Array.Copy(Message, messageCKSUM, Message.Length - 2);
+            return Checksum == CalculateCKSUM(messageCKSUM);
+        }
+    }
+
+    // Use 16 bit CRC (CRC16-CCITT) if bit 3 in CTRL is SET.
+
+    private static ushort CalculateCRC(byte[] data)
     {
         const ushort polynomial = 0x1021;
         ushort crcValue = 0xFFFF;
@@ -78,9 +102,9 @@ class OSDP
         return crcValue;
     }
 
-
-
-    private static byte CheckCKSUM(byte[] bytes)
+    // Use 8-bit CKSUM if bit 3 in CTRL is UNSET.
+    // The CKSUM value is the 8 least significant bits of the 2’s complement value of the sum of all previous characters of the message.
+    private static byte CalculateCKSUM(byte[] bytes)
     {
         int calcSum = 0;
         int bytesLength = bytes.Length - 1;
