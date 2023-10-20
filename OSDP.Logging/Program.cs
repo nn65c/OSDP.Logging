@@ -33,6 +33,10 @@ class Program
                     osdp.ConsoleLog();
                     osdp.FileLog(filename);
                 }
+                else
+                {
+                    Console.WriteLine("OSDP not valid. CKSUM or CRC not correct.");
+                }
             }
             else if (buf != 0xFF && !start)
             {

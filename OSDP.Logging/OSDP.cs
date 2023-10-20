@@ -86,10 +86,30 @@ class OSDP
     }
 
     // Use 16 bit CRC (CRC16-CCITT) if bit 3 in CTRL is SET.
-    // TODO: Implement CRC16-CCITT
-    private ushort CalculateCRC(byte[] data)
+    private static ushort CalculateCRC(byte[] data)
     {
-        return Checksum;
+        const ushort Polynomial = 0x1021;
+        ushort crcValue = 0xFFFF;
+        
+        byte[] augBytes = new byte[] { 0, 0 };  // Augmented zeros
+        byte[] fullData = new byte[augBytes.Length + data.Length];
+
+        // Combine augmented bytes and data
+        augBytes.CopyTo(fullData, 0);
+        data.CopyTo(fullData, augBytes.Length);
+
+        foreach (byte by in fullData)
+        {
+            crcValue ^= (ushort)(by << 8);
+            for (ushort i = 0; i < 8; ++i)
+            {
+                if ((crcValue & 0x8000) > 0)
+                    crcValue = (ushort)((crcValue << 1) ^ Polynomial);
+                else
+                    crcValue <<= 1;
+            }
+        }
+        return crcValue;
     }
 
     // Use 8-bit CKSUM if bit 3 in CTRL is UNSET.
