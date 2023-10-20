@@ -41,15 +41,15 @@ class OSDP
             Ctrl = Message[4];
             CmdReply = Message[5];
 
-            if ((Ctrl & (1 << 3)) == 0)
-            {
-                Checksum = Message[Length - 1];
-                CRC = false;
-            }
-            else
+            if ((Ctrl & (1 << 2)) != 0)
             {
                 Checksum = (ushort)(Message[Length - 2] + (Message[Length - 1] << 8));
                 CRC = true;
+            }
+            else
+            {
+                Checksum = Message[Length - 1];
+                CRC = false;
             }
 
             ValidMessage = CheckMessage();
@@ -57,7 +57,7 @@ class OSDP
         }
 
     }
-    
+
     private bool CheckHeader()
     {
         return Length >= 7 && Length <= 1440;
@@ -69,37 +69,27 @@ class OSDP
         {
             byte[] messageCRC = new byte[Message.Length - 2];
             Array.Copy(Message, messageCRC, Message.Length - 2);
-            return Checksum == CalculateCRC(messageCRC);
+
+            var calculateCRC = CalculateCRC(messageCRC);
+
+            return Checksum == calculateCRC;
         }
         else
         {
             byte[] messageCKSUM = new byte[Message.Length - 1];
-            Array.Copy(Message, messageCKSUM, Message.Length - 2);
-            return Checksum == CalculateCKSUM(messageCKSUM);
+            Array.Copy(Message, messageCKSUM, Message.Length - 1);
+
+            var calculateCKSUM = CalculateCKSUM(messageCKSUM);
+
+            return Checksum == calculateCKSUM;
         }
     }
 
     // Use 16 bit CRC (CRC16-CCITT) if bit 3 in CTRL is SET.
-
-    private static ushort CalculateCRC(byte[] data)
+    // TODO: Implement CRC16-CCITT
+    private ushort CalculateCRC(byte[] data)
     {
-        const ushort polynomial = 0x1021;
-        ushort crcValue = 0xFFFF;
-
-        for (int i = 0; i < data.Length; i++)
-        {
-            byte by = data[i];
-            for (int j = 0; j < 8; j++)
-            {
-                bool bit = ((by >> (7 - j) & 1) == 1);
-                bool c15 = ((crcValue >> 15 & 1) == 1);
-                crcValue <<= 1;
-                if (c15 ^ bit) crcValue ^= polynomial;
-            }
-        }
-
-        crcValue &= 0xFFFF;
-        return crcValue;
+        return Checksum;
     }
 
     // Use 8-bit CKSUM if bit 3 in CTRL is UNSET.
@@ -107,7 +97,7 @@ class OSDP
     private static byte CalculateCKSUM(byte[] bytes)
     {
         int calcSum = 0;
-        int bytesLength = bytes.Length - 1;
+        int bytesLength = bytes.Length;
 
         for (int i = 0; i < bytesLength; i++)
         {
